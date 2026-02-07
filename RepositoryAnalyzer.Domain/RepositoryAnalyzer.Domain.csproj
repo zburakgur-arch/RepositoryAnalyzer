@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Aggregates/" />
+    <Folder Include="Entities/" />
+    <Folder Include="Services/" />
+    <Folder Include="UseCases/" />
+    <Folder Include="ValueObjects/" />
+  </ItemGroup>
+
 </Project>
