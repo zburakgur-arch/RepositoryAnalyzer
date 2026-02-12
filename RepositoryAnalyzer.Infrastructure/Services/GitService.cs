@@ -7,6 +7,7 @@ using RepositoryAnalyzer.Domain.ValueObjects;
 using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
 using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
 using System.IO;
+using File = RepositoryAnalyzer.Domain.Entities.File;
 
 namespace RepositoryAnalyzer.Infrastructure.Services;
 
@@ -131,8 +132,42 @@ public class GitService : IGitService
         return commits;
     }
 
-    public Task<List<Domain.Entities.File>> GetFiles(Repository repository)
+    public async Task<Dictionary<string, File>> GetFiles(Repository repository)
     {
-        throw new NotImplementedException();
+        if (repository == null)
+            throw new ArgumentNullException(nameof(repository));
+
+        if (string.IsNullOrWhiteSpace(repository.LocalPath) || !Directory.Exists(repository.LocalPath))
+            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(repository));
+
+        var files = new Dictionary<string, File>();
+        ScanDirectory(repository.LocalPath, repository.LocalPath, files);
+        return files;
+    }
+
+    private void ScanDirectory(string rootPath, string currentPath, Dictionary<string, File> files)
+    {
+        // .git klasörünü atla
+        if (Path.GetFileName(currentPath) == ".git")
+            return;
+
+        // Mevcut dizindeki dosyaları tara
+        foreach (var filePath in Directory.GetFiles(currentPath))
+        {
+            var relativePath = Path.GetRelativePath(rootPath, filePath);
+
+            var file = new File
+            {
+                Id = relativePath
+            };
+
+            files[relativePath] = file;
+        }
+
+        // Alt dizinlere recursive olarak gir
+        foreach (var subDir in Directory.GetDirectories(currentPath))
+        {
+            ScanDirectory(rootPath, subDir, files);
+        }
     }
 }

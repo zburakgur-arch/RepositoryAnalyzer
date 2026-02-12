@@ -8,5 +8,5 @@ public interface IGitService
 {
     Task<Repository> CloneRepository(string url);
     Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since);
-    Task<List<File>> GetFiles(Repository repository);
+    Task<Dictionary<string, File>> GetFiles(Repository repository);
 }

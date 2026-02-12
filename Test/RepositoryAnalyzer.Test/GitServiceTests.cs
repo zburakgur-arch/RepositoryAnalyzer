@@ -10,6 +10,8 @@ using Xunit;
 using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
 using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
 
+using File = RepositoryAnalyzer.Domain.Entities.File;
+
 namespace RepositoryAnalyzer.Test
 {
     public class GitServiceTests
@@ -135,6 +137,59 @@ namespace RepositoryAnalyzer.Test
                 Assert.NotNull(firstCommit.Author.Id);
                 Assert.NotNull(firstCommit.Changes);
                 Assert.True(firstCommit.Date >= since);
+            }
+
+            // Cleanup
+            if (Directory.Exists(repository.LocalPath))
+            {
+                Directory.Delete(repository.LocalPath, true);
+            }
+        }
+
+        [Fact]
+        public async Task GetFiles_NullRepository_ThrowsArgumentNullException()
+        {
+            // Arrange
+            Repository repository = null;
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _gitService.GetFiles(repository));
+        }
+
+        [Fact]
+        public async Task GetFiles_InvalidLocalPath_ThrowsArgumentException()
+        {
+            // Arrange
+            var repository = new Repository
+            {
+                Id = "https://github.com/example/repo.git",
+                LocalPath = "/nonexistent/path",
+                ClonedAt = DateTime.UtcNow
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetFiles(repository));
+        }
+
+        [Fact]
+        public async Task GetFiles_ValidRepository_ReturnsDictionaryWithFiles()
+        {
+            // Arrange - Önce gerçek bir repo clone et
+            var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
+            var repository = await _gitService.CloneRepository(url);
+
+            // Act
+            var files = await _gitService.GetFiles(repository);
+
+            // Assert
+            Assert.NotNull(files);
+            Assert.IsType<Dictionary<string, File>>(files);
+            Assert.True(files.Count > 0);
+
+            // Her dosyanın key'i ile File.Id'si eşleşmeli
+            foreach (var kvp in files)
+            {
+                Assert.Equal(kvp.Key, kvp.Value.Id);
             }
 
             // Cleanup

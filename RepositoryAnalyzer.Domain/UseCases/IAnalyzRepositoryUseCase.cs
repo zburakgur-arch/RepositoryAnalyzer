@@ -14,7 +14,7 @@ namespace RepositoryAnalyzer.Domain.UseCases
         void ValidateUrl(string url);
         Task<Repository> Clone(string url);
         Task<List<Commit>> GetCommitHistory(Repository repository);
-        Task<List<File>> GetFiles(Repository repository);
+        Task<Dictionary<string, File>> GetFiles(Repository repository);
         Task CalculateComplexity(File file);
     }
 }
