@@ -7,6 +7,8 @@ using RepositoryAnalyzer.Application.Settings;
 using RepositoryAnalyzer.Domain.Entities;
 using RepositoryAnalyzer.Infrastructure.Services;
 using Xunit;
+using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
+using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
 
 namespace RepositoryAnalyzer.Test
 {
@@ -81,6 +83,65 @@ namespace RepositoryAnalyzer.Test
             });
 
             Assert.Contains("Failed to clone repository", exception.Message);
+        }
+
+        [Fact]
+        public async Task GetCommitHistory_NullRepository_ThrowsArgumentNullException()
+        {
+            // Arrange
+            Repository repository = null;
+            var since = DateTime.UtcNow.AddDays(-7);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _gitService.GetCommitHistory(repository, since));
+        }
+
+        [Fact]
+        public async Task GetCommitHistory_InvalidLocalPath_ThrowsArgumentException()
+        {
+            // Arrange
+            var repository = new Repository
+            {
+                Id = "https://github.com/example/repo.git",
+                LocalPath = "/nonexistent/path",
+                ClonedAt = DateTime.UtcNow
+            };
+            var since = DateTime.UtcNow.AddDays(-7);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetCommitHistory(repository, since));
+        }
+
+        [Fact]
+        public async Task GetCommitHistory_ValidRepository_ReturnsCommitList()
+        {
+            // Arrange - Önce gerçek bir repo clone et
+            var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
+            var repository = await _gitService.CloneRepository(url);
+            var since = DateTime.UtcNow.AddMonths(-6);
+
+            // Act
+            var commits = await _gitService.GetCommitHistory(repository, since);
+
+            // Assert
+            Assert.NotNull(commits);
+            Assert.IsType<List<Commit>>(commits);
+
+            if (commits.Count > 0)
+            {
+                var firstCommit = commits.First();
+                Assert.NotNull(firstCommit.Id);
+                Assert.NotNull(firstCommit.Author);
+                Assert.NotNull(firstCommit.Author.Id);
+                Assert.NotNull(firstCommit.Changes);
+                Assert.True(firstCommit.Date >= since);
+            }
+
+            // Cleanup
+            if (Directory.Exists(repository.LocalPath))
+            {
+                Directory.Delete(repository.LocalPath, true);
+            }
         }
     }
 }

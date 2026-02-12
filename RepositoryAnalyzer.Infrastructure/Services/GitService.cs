@@ -3,6 +3,7 @@ using LibGit2Sharp;
 using RepositoryAnalyzer.Application.Services;
 using RepositoryAnalyzer.Application.Settings;
 using RepositoryAnalyzer.Domain.Entities;
+using RepositoryAnalyzer.Domain.ValueObjects;
 using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
 using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
 using System.IO;
@@ -65,9 +66,69 @@ public class GitService : IGitService
         };
     }
 
-    public Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since)
+    public async Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since)
     {
-        throw new NotImplementedException();
+        if (repository == null)
+            throw new ArgumentNullException(nameof(repository));
+
+        if (string.IsNullOrWhiteSpace(repository.LocalPath) || !Directory.Exists(repository.LocalPath))
+            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(repository));
+
+        var commits = new List<Commit>();
+
+        using var repo = new LibGit2Sharp.Repository(repository.LocalPath);
+
+        // --all: Tüm branch'lerdeki commit'leri topla
+        var allCommits = repo.Commits.QueryBy(new CommitFilter
+        {
+            IncludeReachableFrom = repo.Refs,
+            SortBy = CommitSortStrategies.Time
+        });
+
+        var compareOptions = new CompareOptions
+        {
+            // --no-renames
+            Similarity = SimilarityOptions.None
+        };
+
+        foreach (var gitCommit in allCommits)
+        {
+            // --since filtresi
+            if (gitCommit.Author.When.DateTime < since)
+                continue;
+
+            var commit = new Commit
+            {
+                // %H
+                Id = gitCommit.Sha,
+                // %ad (author date)
+                Date = gitCommit.Author.When.DateTime,
+                // %an (author name)
+                Author = new Developer { Id = gitCommit.Author.Name },
+                Changes = new List<Change>()
+            };
+
+            // --numstat: Her dosya için eklenen/silinen satır sayısı
+            Tree parentTree = gitCommit.Parents.Any()
+                ? gitCommit.Parents.First().Tree
+                : null;
+
+            var diff = repo.Diff.Compare<Patch>(parentTree, gitCommit.Tree, compareOptions);
+
+            foreach (var entry in diff)
+            {
+                commit.Changes.Add(new Change
+                {
+                    FilePath = entry.Path,
+                    AddedLines = entry.LinesAdded,
+                    DeletedLines = entry.LinesDeleted
+                });
+            }
+
+            commits.Add(commit);
+        }
+
+        return commits;
     }
 
     public Task<List<Domain.Entities.File>> GetFiles(Repository repository)
