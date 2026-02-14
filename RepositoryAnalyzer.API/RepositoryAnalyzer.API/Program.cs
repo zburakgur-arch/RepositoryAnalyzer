@@ -1,6 +1,7 @@
 using MediatR;
 using RepositoryAnalyzer.API.Queries;
 using RepositoryAnalyzer.Application.Settings;
+using RepositoryAnalyzer.Domain.UseCases;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,11 +28,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/weatherforecast", async (IMediator mediator) =>
+app.MapGet("/analyze", async (string url, IMediator mediator) =>
 {
-    return await mediator.Send(new GetWeatherForecastQuery());
+    return Results.Ok(await mediator.Send(new AnalyzeRepositoryQuery(url)));
 })
-.WithName("GetWeatherForecast")
+.WithName("AnalyzeRepository")
 .WithOpenApi();
 
 app.Run();
