@@ -10,6 +10,15 @@ namespace RepositoryAnalyzer.Domain.Entities
     public class File :IEntity<string>
     {
         public string Id { get; set; } // File path
-        public Complexity Complexity { get; set; }
+        private Complexity Complexity { get; set; } = new Complexity();
+
+        public int GetLineOfCodes() => Complexity.LineOfCodes;
+        public void SetLineOfCodes(int value) => Complexity.LineOfCodes = value;
+
+        public int GetWhiteSpace() => Complexity.WhiteSpace;
+        public void SetWhiteSpace(int value) => Complexity.WhiteSpace = value;
+
+        public int GetCyclomatic() => Complexity.Cyclomatic;
+        public void SetCyclomatic(int value) => Complexity.Cyclomatic = value;
     }
 }
