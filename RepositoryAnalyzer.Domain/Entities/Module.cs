@@ -7,7 +7,7 @@ using RepositoryAnalyzer.Domain.ValueObjects;
 
 namespace RepositoryAnalyzer.Domain.Entities
 {
-    public class File :IEntity<string>
+    public class Module :IEntity<string>
     {
         public string Id { get; set; } // File path
         private Complexity Complexity { get; set; } = new Complexity();

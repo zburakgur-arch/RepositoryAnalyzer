@@ -8,9 +8,10 @@ using RepositoryAnalyzer.Domain.Entities;
 using RepositoryAnalyzer.Infrastructure.Services;
 using Xunit;
 using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
-using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
+using Repository = RepositoryAnalyzer.Domain.Aggregates.Repository;
 
-using File = RepositoryAnalyzer.Domain.Entities.File;
+using Module = RepositoryAnalyzer.Domain.Entities.Module;
+using RepositoryAnalyzer.Domain.Exceptions;
 
 namespace RepositoryAnalyzer.Test
 {
@@ -38,17 +39,16 @@ namespace RepositoryAnalyzer.Test
             var expectedLocalPath = Path.Combine(_gitSettings.WorkingDirectory, repoName);
 
             // Act
-            var repository = await _gitService.CloneRepository(url);
+            var localPath = await _gitService.CloneRepository(url);
 
             // Assert
-            Assert.Equal(url, repository.Id);
-            Assert.Equal(expectedLocalPath, repository.LocalPath);
-            Assert.True(Directory.Exists(expectedLocalPath));
+            Assert.Equal(expectedLocalPath, localPath); // Ensure localPath is used correctly
+            Assert.True(Directory.Exists(localPath));
 
             // Cleanup
-            if (Directory.Exists(expectedLocalPath))
+            if (Directory.Exists(localPath))
             {
-                Directory.Delete(expectedLocalPath, true);
+                Directory.Delete(localPath, true);
             }
         }
 
@@ -59,7 +59,7 @@ namespace RepositoryAnalyzer.Test
             var invalidUrl = "https://github.com/example/repo"; // Missing .git
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.CloneRepository(invalidUrl));
+            await Assert.ThrowsAsync<InvalidUrlException>(() => _gitService.CloneRepository(invalidUrl));
         }
 
         [Fact]
@@ -69,7 +69,7 @@ namespace RepositoryAnalyzer.Test
             var emptyUrl = "";
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.CloneRepository(emptyUrl));
+            await Assert.ThrowsAsync<InvalidUrlException>(() => _gitService.CloneRepository(emptyUrl));
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace RepositoryAnalyzer.Test
         public async Task GetCommitHistory_NullRepository_ThrowsArgumentNullException()
         {
             // Arrange
-            Repository repository = null;
+            Repository repository = null!; // Explicitly mark as nullable
             var since = DateTime.UtcNow.AddDays(-7);
 
             // Act & Assert
@@ -102,12 +102,7 @@ namespace RepositoryAnalyzer.Test
         public async Task GetCommitHistory_InvalidLocalPath_ThrowsArgumentException()
         {
             // Arrange
-            var repository = new Repository
-            {
-                Id = "https://github.com/example/repo.git",
-                LocalPath = "/nonexistent/path",
-                ClonedAt = DateTime.UtcNow
-            };
+            var repository = new Repository("https://github.com/example/repo.git", "/nonexistent/path", DateTime.UtcNow);
             var since = DateTime.UtcNow.AddDays(-7);
 
             // Act & Assert
@@ -117,14 +112,14 @@ namespace RepositoryAnalyzer.Test
         [Fact]
         public async Task GetCommitHistory_ValidRepository_ReturnsCommitList()
         {
-            // Arrange - Önce gerçek bir repo clone et
+            // Arrange - Clone a real repository first
             var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
-            var repository = await _gitService.CloneRepository(url);
+            var localPath = await _gitService.CloneRepository(url);
             var since = DateTime.UtcNow.AddMonths(-6);
+            Repository repository = new Repository(url, localPath, DateTime.UtcNow);
 
             // Act
             var commits = await _gitService.GetCommitHistory(repository, since);
-
             // Assert
             Assert.NotNull(commits);
             Assert.IsType<List<Commit>>(commits);
@@ -150,7 +145,7 @@ namespace RepositoryAnalyzer.Test
         public async Task GetFiles_NullRepository_ThrowsArgumentNullException()
         {
             // Arrange
-            Repository repository = null;
+            Repository repository = null!; // Explicitly mark as nullable
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(() => _gitService.GetFiles(repository));
@@ -160,12 +155,7 @@ namespace RepositoryAnalyzer.Test
         public async Task GetFiles_InvalidLocalPath_ThrowsArgumentException()
         {
             // Arrange
-            var repository = new Repository
-            {
-                Id = "https://github.com/example/repo.git",
-                LocalPath = "/nonexistent/path",
-                ClonedAt = DateTime.UtcNow
-            };
+            var repository = new Repository("https://github.com/example/repo.git", "/nonexistent/path", DateTime.UtcNow);
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetFiles(repository));
@@ -174,19 +164,20 @@ namespace RepositoryAnalyzer.Test
         [Fact]
         public async Task GetFiles_ValidRepository_ReturnsDictionaryWithFiles()
         {
-            // Arrange - Önce gerçek bir repo clone et
+            // Arrange - Clone a real repository first
             var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
-            var repository = await _gitService.CloneRepository(url);
+            var localPath = await _gitService.CloneRepository(url);
+            Repository repository = new Repository(url, localPath, DateTime.UtcNow);
 
             // Act
             var files = await _gitService.GetFiles(repository);
 
             // Assert
             Assert.NotNull(files);
-            Assert.IsType<Dictionary<string, File>>(files);
+            Assert.IsType<Dictionary<string, Module>>(files);
             Assert.True(files.Count > 0);
 
-            // Her dosyanın key'i ile File.Id'si eşleşmeli
+            // Each file's key should match File.Id
             foreach (var kvp in files)
             {
                 Assert.Equal(kvp.Key, kvp.Value.Id);

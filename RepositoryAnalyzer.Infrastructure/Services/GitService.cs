@@ -1,13 +1,14 @@
 using System;
 using LibGit2Sharp;
-using RepositoryAnalyzer.Application.Services;
 using RepositoryAnalyzer.Application.Settings;
 using RepositoryAnalyzer.Domain.Entities;
 using RepositoryAnalyzer.Domain.ValueObjects;
 using Commit = RepositoryAnalyzer.Domain.Entities.Commit;
-using Repository = RepositoryAnalyzer.Domain.Entities.Repository;
+using Repository = RepositoryAnalyzer.Domain.Aggregates.Repository;
 using System.IO;
-using File = RepositoryAnalyzer.Domain.Entities.File;
+using Module = RepositoryAnalyzer.Domain.Entities.Module;
+using RepositoryAnalyzer.Domain.Services;
+using RepositoryAnalyzer.Domain.Validators;
 
 namespace RepositoryAnalyzer.Infrastructure.Services;
 
@@ -20,13 +21,9 @@ public class GitService : IGitService
         _gitSettings = gitSettings ?? throw new ArgumentNullException(nameof(gitSettings));
     }
 
-    public async Task<Repository> CloneRepository(string url)
+    public async Task<string> CloneRepository(string url)
     {
-        if (string.IsNullOrWhiteSpace(url))
-            throw new ArgumentException("URL cannot be null or empty", nameof(url));
-
-        if (!url.EndsWith(".git"))
-            throw new ArgumentException("URL must end with .git", nameof(url));
+        UrlValidator.Validate(url);
 
         // URL'den repo ismi çıkar
         var repoName = url.TrimEnd('/').Split('/').Last().Replace(".git", "");
@@ -59,12 +56,7 @@ public class GitService : IGitService
             throw new InvalidOperationException($"Failed to clone repository from URL: {url}", ex);
         }
 
-        return new Repository
-        {
-            Id = url,
-            LocalPath = localPath,
-            ClonedAt = DateTime.UtcNow
-        };
+        return localPath;
     }
 
     public async Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since)
@@ -132,7 +124,7 @@ public class GitService : IGitService
         return commits;
     }
 
-    public async Task<Dictionary<string, File>> GetFiles(Repository repository)
+    public async Task<Dictionary<string, Module>> GetFiles(Repository repository)
     {
         if (repository == null)
             throw new ArgumentNullException(nameof(repository));
@@ -140,12 +132,12 @@ public class GitService : IGitService
         if (string.IsNullOrWhiteSpace(repository.LocalPath) || !Directory.Exists(repository.LocalPath))
             throw new ArgumentException("Repository local path is invalid or does not exist", nameof(repository));
 
-        var files = new Dictionary<string, File>();
+        var files = new Dictionary<string, Module>();
         ScanDirectory(repository.LocalPath, repository.LocalPath, files);
         return files;
     }
 
-    private void ScanDirectory(string rootPath, string currentPath, Dictionary<string, File> files)
+    private void ScanDirectory(string rootPath, string currentPath, Dictionary<string, Module> files)
     {
         // .git klasörünü atla
         if (Path.GetFileName(currentPath) == ".git")
@@ -156,7 +148,7 @@ public class GitService : IGitService
         {
             var relativePath = Path.GetRelativePath(rootPath, filePath);
 
-            var file = new File
+            var file = new Module
             {
                 Id = relativePath
             };

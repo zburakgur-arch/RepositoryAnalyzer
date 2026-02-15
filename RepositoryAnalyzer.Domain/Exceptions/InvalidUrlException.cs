@@ -7,17 +7,10 @@ using System.Threading.Tasks;
 
 namespace RepositoryAnalyzer.Domain.Exceptions
 {
-    public class InvalidUrlException : Exception
+    public class InvalidUrlException : ADomainException
     {
-        readonly HttpStatusCode _statusCode = HttpStatusCode.BadRequest;
-
-        public InvalidUrlException() : base("The provided URL is invalid.")
+        public InvalidUrlException() : base("The provided URL is invalid.", HttpStatusCode.BadRequest)
         {
-        }
-
-        public HttpStatusCode GetHttpStatusCode()
-        {
-            return _statusCode;
         }
     }
 }

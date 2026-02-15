@@ -1,27 +1,36 @@
 using MediatR;
 using RepositoryAnalyzer.API.Queries;
-using RepositoryAnalyzer.Domain.UseCases;
+using RepositoryAnalyzer.Domain.Aggregates;
+using RepositoryAnalyzer.Domain.Entities;
+using RepositoryAnalyzer.Domain.Services;
+using RepositoryAnalyzer.Domain.Validators;
 
 namespace RepositoryAnalyzer.API.Handlers;
 
 public class AnalyzeRepositoryHandler : IRequestHandler<AnalyzeRepositoryQuery, AnalyzeRepositoryResult>
 {
-    private readonly IAnalyzRepositoryUseCase _useCase;
+    private readonly IGitService _gitService;
 
-    public AnalyzeRepositoryHandler(IAnalyzRepositoryUseCase useCase)
+    public AnalyzeRepositoryHandler(IGitService gitService)
     {
-        _useCase = useCase;
+        _gitService = gitService ?? throw new ArgumentNullException(nameof(gitService));
     }
 
     public async Task<AnalyzeRepositoryResult> Handle(AnalyzeRepositoryQuery request, CancellationToken cancellationToken)
     {
-        _useCase.ValidateUrl(request.Url);
+        UrlValidator.Validate(request.Url);
+        string localPath = await _gitService.CloneRepository(request.Url);
 
-        var repository = await _useCase.Clone(request.Url);
-        var files = await _useCase.GetFiles(repository);
-        var commits = await _useCase.GetCommitHistory(repository);
+        Repository repository = new Repository(request.Url, localPath, DateTime.UtcNow);
 
-        var fileResults = new List<FileComplexityResult>();
+        List<Commit> commits = await _gitService.GetCommitHistory(repository, DateTime.UtcNow.AddMonths(-1));
+        Dictionary<string, Module> files = await _gitService.GetFiles(repository);
+
+        repository.SetCommits(commits);
+        repository.SetModules(files);
+
+        repository.CalculateLineOfCodeComplexity();
+        repository.CalculateFileCurns();
 
         return null;
     }
