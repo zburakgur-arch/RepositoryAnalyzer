@@ -59,17 +59,14 @@ public class GitService : IGitService
         return localPath;
     }
 
-    public async Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since)
+    public async Task<List<Commit>> GetCommitHistory(string localPath, DateTime since)
     {
-        if (repository == null)
-            throw new ArgumentNullException(nameof(repository));
-
-        if (string.IsNullOrWhiteSpace(repository.LocalPath) || !Directory.Exists(repository.LocalPath))
-            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(repository));
+        if (string.IsNullOrWhiteSpace(localPath) || !Directory.Exists(localPath))
+            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(localPath));
 
         var commits = new List<Commit>();
 
-        using var repo = new LibGit2Sharp.Repository(repository.LocalPath);
+        using var repo = new LibGit2Sharp.Repository(localPath);
 
         // --all: Tüm branch'lerdeki commit'leri topla
         var allCommits = repo.Commits.QueryBy(new CommitFilter
@@ -124,16 +121,13 @@ public class GitService : IGitService
         return commits;
     }
 
-    public async Task<Dictionary<string, Module>> GetFiles(Repository repository)
+    public async Task<Dictionary<string, Module>> GetFiles(string localPath)
     {
-        if (repository == null)
-            throw new ArgumentNullException(nameof(repository));
-
-        if (string.IsNullOrWhiteSpace(repository.LocalPath) || !Directory.Exists(repository.LocalPath))
-            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(repository));
+        if (string.IsNullOrWhiteSpace(localPath) || !Directory.Exists(localPath))
+            throw new ArgumentException("Repository local path is invalid or does not exist", nameof(localPath));
 
         var files = new Dictionary<string, Module>();
-        ScanDirectory(repository.LocalPath, repository.LocalPath, files);
+        ScanDirectory(localPath, localPath, files);
         return files;
     }
 

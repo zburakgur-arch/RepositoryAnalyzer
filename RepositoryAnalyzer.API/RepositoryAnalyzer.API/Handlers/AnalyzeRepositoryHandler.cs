@@ -21,17 +21,14 @@ public class AnalyzeRepositoryHandler : IRequestHandler<AnalyzeRepositoryQuery, 
         UrlValidator.Validate(request.Url);
         string localPath = await _gitService.CloneRepository(request.Url);
 
-        Repository repository = new Repository(request.Url, localPath, DateTime.UtcNow);
+        Dictionary<string, Module> files = await _gitService.GetFiles(localPath);
+        List<Commit> commits = await _gitService.GetCommitHistory(localPath, DateTime.UtcNow.AddMonths(-1));
 
-        List<Commit> commits = await _gitService.GetCommitHistory(repository, DateTime.UtcNow.AddMonths(-1));
-        Dictionary<string, Module> files = await _gitService.GetFiles(repository);
-
-        repository.SetCommits(commits);
-        repository.SetModules(files);
+        Repository repository = new Repository(request.Url, localPath, DateTime.UtcNow, files, commits);
 
         repository.CalculateLineOfCodeComplexity();
         repository.CalculateFileCurns();
 
-        return null;
+        return null; // TODO: Map Repository to AnalyzeRepositoryResult
     }
 }

@@ -9,30 +9,22 @@ public class Repository : IAggregate<string>
     public string Name { get; }
     public string LocalPath { get; }
     public DateTime ClonedAt { get; }
-    private Dictionary<string, Module> _modules = new();
-    private List<Commit> _commits = new();
+    private Dictionary<string, Module> Modules = new();
+    private List<Commit> Commits = new();
 
-    public Repository(string id, string localPath, DateTime clonedAt)
+    public Repository(string id, string localPath, DateTime clonedAt, Dictionary<string, Module> modules, List<Commit> commits)
     {
         Id = id ?? throw new ArgumentNullException(nameof(id));
         LocalPath = localPath ?? throw new ArgumentNullException(nameof(localPath));
         ClonedAt = clonedAt;
         Name = Id.Split('/').Last().Replace(".git", "");
-    }
-
-    public void SetModules(Dictionary<string, Module> modules)
-    {
-        _modules = modules ?? throw new ArgumentNullException(nameof(modules));
-    }
-
-    public void SetCommits(List<Commit> commits)
-    {
-        _commits = commits ?? throw new ArgumentNullException(nameof(commits));
+        Modules = modules ?? throw new ArgumentNullException(nameof(modules));
+        Commits = commits ?? throw new ArgumentNullException(nameof(commits));
     }
 
     public void CalculateLineOfCodeComplexity()
     {
-        foreach (var module in _modules.Values)
+        foreach (var module in Modules.Values)
         {
             if (!System.IO.File.Exists(module.Id))
                 throw new FileNotFoundException("Dosya bulunamadı.", module.Id);
@@ -44,7 +36,7 @@ public class Repository : IAggregate<string>
 
     public void CalculateWhitespaceComplexity()
     {
-        foreach (var module in _modules.Values)
+        foreach (var module in Modules.Values)
         {
             if (!System.IO.File.Exists(module.Id))
                 throw new FileNotFoundException("Dosya bulunamadı.", module.Id);
@@ -67,7 +59,7 @@ public class Repository : IAggregate<string>
 
     public void CalculateCyclomaticComplexity()
     {
-        foreach (var module in _modules.Values)
+        foreach (var module in Modules.Values)
         {
             // Cyclomatic complexity calculation logic goes here
             throw new NotImplementedException();
@@ -76,11 +68,11 @@ public class Repository : IAggregate<string>
 
     public void CalculateFileCurns()
     {
-        foreach (var commit in _commits)
+        foreach (var commit in Commits)
         {
             foreach (var change in commit.Changes)
             {
-                if (!_modules.TryGetValue(change.FilePath, out var module))
+                if (!Modules.TryGetValue(change.FilePath, out var module))
                 {
                     // Skip if no matching module is found
                     continue;

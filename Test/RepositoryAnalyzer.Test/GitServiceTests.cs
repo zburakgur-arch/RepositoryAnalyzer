@@ -37,12 +37,11 @@ namespace RepositoryAnalyzer.Test
             var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
             var repoName = "RepositoryAnalyzer";
             var expectedLocalPath = Path.Combine(_gitSettings.WorkingDirectory, repoName);
-
             // Act
             var localPath = await _gitService.CloneRepository(url);
 
             // Assert
-            Assert.Equal(expectedLocalPath, localPath); // Ensure localPath is used correctly
+            Assert.Equal(expectedLocalPath, localPath);
             Assert.True(Directory.Exists(localPath));
 
             // Cleanup
@@ -88,38 +87,38 @@ namespace RepositoryAnalyzer.Test
         }
 
         [Fact]
-        public async Task GetCommitHistory_NullRepository_ThrowsArgumentNullException()
+        public async Task GetCommitHistory_NullLocalPath_ThrowsArgumentNullException()
         {
             // Arrange
-            Repository repository = null!; // Explicitly mark as nullable
+            string localPath = null!; // Explicitly mark as nullable
             var since = DateTime.UtcNow.AddDays(-7);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _gitService.GetCommitHistory(repository, since));
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetCommitHistory(localPath, since));
         }
 
         [Fact]
         public async Task GetCommitHistory_InvalidLocalPath_ThrowsArgumentException()
         {
             // Arrange
-            var repository = new Repository("https://github.com/example/repo.git", "/nonexistent/path", DateTime.UtcNow);
+            var localPath = "/nonexistent/path";
             var since = DateTime.UtcNow.AddDays(-7);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetCommitHistory(repository, since));
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetCommitHistory(localPath, since));
         }
 
         [Fact]
-        public async Task GetCommitHistory_ValidRepository_ReturnsCommitList()
+        public async Task GetCommitHistory_ValidLocalPath_ReturnsCommitList()
         {
             // Arrange - Clone a real repository first
             var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
             var localPath = await _gitService.CloneRepository(url);
             var since = DateTime.UtcNow.AddMonths(-6);
-            Repository repository = new Repository(url, localPath, DateTime.UtcNow);
 
             // Act
-            var commits = await _gitService.GetCommitHistory(repository, since);
+            var commits = await _gitService.GetCommitHistory(localPath, since);
+
             // Assert
             Assert.NotNull(commits);
             Assert.IsType<List<Commit>>(commits);
@@ -135,42 +134,41 @@ namespace RepositoryAnalyzer.Test
             }
 
             // Cleanup
-            if (Directory.Exists(repository.LocalPath))
+            if (Directory.Exists(localPath))
             {
-                Directory.Delete(repository.LocalPath, true);
+                Directory.Delete(localPath, true);
             }
         }
 
         [Fact]
-        public async Task GetFiles_NullRepository_ThrowsArgumentNullException()
+        public async Task GetFiles_NullLocalPath_ThrowsArgumentException()
         {
             // Arrange
-            Repository repository = null!; // Explicitly mark as nullable
+            string localPath = null!; // Explicitly mark as nullable
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _gitService.GetFiles(repository));
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetFiles(localPath));
         }
 
         [Fact]
         public async Task GetFiles_InvalidLocalPath_ThrowsArgumentException()
         {
             // Arrange
-            var repository = new Repository("https://github.com/example/repo.git", "/nonexistent/path", DateTime.UtcNow);
+            var localPath = "/nonexistent/path";
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetFiles(repository));
+            await Assert.ThrowsAsync<ArgumentException>(() => _gitService.GetFiles(localPath));
         }
 
         [Fact]
-        public async Task GetFiles_ValidRepository_ReturnsDictionaryWithFiles()
+        public async Task GetFiles_ValidLocalPath_ReturnsDictionaryWithFiles()
         {
             // Arrange - Clone a real repository first
             var url = "https://github.com/zburakgur-arch/RepositoryAnalyzer.git";
             var localPath = await _gitService.CloneRepository(url);
-            Repository repository = new Repository(url, localPath, DateTime.UtcNow);
 
             // Act
-            var files = await _gitService.GetFiles(repository);
+            var files = await _gitService.GetFiles(localPath);
 
             // Assert
             Assert.NotNull(files);
@@ -184,9 +182,9 @@ namespace RepositoryAnalyzer.Test
             }
 
             // Cleanup
-            if (Directory.Exists(repository.LocalPath))
+            if (Directory.Exists(localPath))
             {
-                Directory.Delete(repository.LocalPath, true);
+                Directory.Delete(localPath, true);
             }
         }
     }

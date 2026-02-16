@@ -8,6 +8,6 @@ namespace RepositoryAnalyzer.Domain.Services;
 public interface IGitService
 {
     Task<string> CloneRepository(string url);
-    Task<List<Commit>> GetCommitHistory(Repository repository, DateTime since);
-    Task<Dictionary<string, Module>> GetFiles(Repository repository);
+    Task<List<Commit>> GetCommitHistory(string localPath, DateTime since);
+    Task<Dictionary<string, Module>> GetFiles(string localPath);
 }

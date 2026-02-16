@@ -12,6 +12,8 @@ namespace RepositoryAnalyzer.Domain.Entities
         public string Id { get; set; } // File path
         private Complexity Complexity { get; set; } = new Complexity();
 
+        private List<Churn> Churns { get; set; } = new List<Churn>();
+
         public int GetLineOfCodes() => Complexity.LineOfCodes;
         public void SetLineOfCodes(int value) => Complexity.LineOfCodes = value;
 
@@ -20,5 +22,8 @@ namespace RepositoryAnalyzer.Domain.Entities
 
         public int GetCyclomatic() => Complexity.Cyclomatic;
         public void SetCyclomatic(int value) => Complexity.Cyclomatic = value;
+
+        public List<Churn> GetChurns() => Churns;
+        public void AddChurn(Churn churn) => Churns.Add(churn);
     }
 }
