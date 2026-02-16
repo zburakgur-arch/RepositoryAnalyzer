@@ -1,5 +1,6 @@
 ﻿using RepositoryAnalyzer.Domain.Aggregates;
 using RepositoryAnalyzer.Domain.Entities;
+using RepositoryAnalyzer.Domain.ValueObjects;
 
 namespace RepositoryAnalyzer.Domain.Aggregates;
 
@@ -26,10 +27,10 @@ public class Repository : IAggregate<string>
     {
         foreach (var module in Modules.Values)
         {
-            if (!System.IO.File.Exists(module.Id))
+            if (!System.IO.File.Exists(LocalPath + "/" + module.Id))
                 throw new FileNotFoundException("Dosya bulunamadı.", module.Id);
 
-            int lineCount = System.IO.File.ReadAllLines(module.Id).Length;
+            int lineCount = System.IO.File.ReadAllLines(LocalPath + "/" + module.Id).Length;
             module.SetLineOfCodes(lineCount);
         }
     }
@@ -38,10 +39,10 @@ public class Repository : IAggregate<string>
     {
         foreach (var module in Modules.Values)
         {
-            if (!System.IO.File.Exists(module.Id))
+            if (!System.IO.File.Exists(LocalPath + "/" + module.Id))
                 throw new FileNotFoundException("Dosya bulunamadı.", module.Id);
 
-            var lines = System.IO.File.ReadAllLines(module.Id);
+            var lines = System.IO.File.ReadAllLines(LocalPath + "/" + module.Id);
             int totalIndentation = 0;
 
             foreach (var line in lines)
@@ -78,8 +79,7 @@ public class Repository : IAggregate<string>
                     continue;
                 }
 
-                // Logic to calculate file churns for the matched module
-                throw new NotImplementedException();
+                module.AddChurn(new Churn(change.AddedLines, change.DeletedLines));
             }
         }
     }
